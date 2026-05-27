@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memorama Deportes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .game-container {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 14px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .stat { text-align: center; }
+  .stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #8899bb;
+    margin-bottom: 2px;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #e8d5a3;
+  }
+  .stat-value.warn { color: #e05c3a; }
+
+  /* ── Tablero ── */
+  .board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .board.locked { pointer-events: none; }
+
+  /* ── Carta ── */
+  .card-slot {
+    aspect-ratio: 2/3;
+    perspective: 700px;
+    cursor: pointer;
+  }
+
+  .card-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.42s cubic-bezier(.4,0,.2,1);
+    border-radius: 10px;
+  }
+
+  .card-inner.flipped  { transform: rotateY(180deg); }
+  .card-inner.matched  {
+    transform: rotateY(180deg);
+    opacity: 0;
+    transition: transform 0.42s, opacity 0.35s 0.3s;
+    pointer-events: none;
+  }
+
+  .card-face {
+    position: absolute; inset: 0;
+    border-radius: 10px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Cara trasera – azul oscuro con patrón */
+  .card-back {
+    background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+    border: 2px solid #1a4a7a;
+  }
+
+  .card-back-inner {
+    width: 52%;
+    height: 60%;
+    border: 1.5px solid rgba(255,255,255,0.18);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    opacity: 0.55;
+  }
+
+  /* Cara delantera – amarillo mostaza */
+  .card-front {
+    background: linear-gradient(160deg, #d4a017 0%, #b8860b 100%);
+    border: 2px solid #c9920a;
+    transform: rotateY(180deg);
+  }
+
+  .card-front:hover { filter: brightness(1.08); }
+
+  .card-emoji {
+    font-size: clamp(26px, 5vw, 38px);
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  /* ── Footer ── */
+  .footer {
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn-restart {
+    padding: 9px 24px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1.5px solid #d4a017;
+    background: transparent;
+    color: #e8d5a3;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .btn-restart:hover {
+    background: #d4a017;
+    color: #1a1a2e;
+  }
+
+  /* ── Overlay de resultado ── */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  .overlay.show { display: flex; }
+
+  .result-card {
+    background: #16213e;
+    border: 1px solid #d4a017;
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    max-width: 300px;
+    width: 90%;
+    animation: popIn 0.3s cubic-bezier(.4,0,.2,1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+  }
+
+  .result-stars  { font-size: 32px; letter-spacing: 6px; margin-bottom: 0.75rem; }
+  .result-title  { font-size: 22px; font-weight: 600; color: #e8d5a3; margin-bottom: 0.4rem; }
+  .result-sub    { font-size: 13px; color: #8899bb; margin-bottom: 1.5rem; }
+  .result-score  { font-size: 52px; font-weight: 700; color: #d4a017; line-height: 1; }
+  .result-label  { font-size: 12px; color: #8899bb; margin-bottom: 1.75rem; }
+
+  .btn-play-again {
+    padding: 10px 32px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background: #d4a017;
+    color: #1a1a2e;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .btn-play-again:hover { background: #e8b820; }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); border: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <h1 class="sr-only">Memorama de deportes</h1>
+
+  <div class="header">
+    <div class="stat">
+      <div class="stat-label">Pares</div>
+      <div class="stat-value" id="score">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Tiempo</div>
+      <div class="stat-value" id="timer">1:00</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Intentos</div>
+      <div class="stat-value" id="tries">0</div>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="footer">
+    <button class="btn-restart" onclick="initGame()">↺ Nuevo juego</button>
+  </div>
+</div>
+
+<!-- Overlay resultado -->
+<div class="overlay" id="overlay">
+  <div class="result-card">
+    <div class="result-stars" id="result-stars"></div>
+    <div class="result-title"  id="result-title"></div>
+    <div class="result-sub"   id="result-sub"></div>
+    <div class="result-score" id="result-score">0</div>
+    <div class="result-label">pares encontrados de 10</div>
+    <button class="btn-play-again" onclick="initGame()">Jugar de nuevo</button>
+  </div>
+</div>
+
+<script>
+  const SPORTS = ['⚽','🏀','🎾','🏈','⚾','🏐','🏉','🎱','🏓','🏸'];
+  const TOTAL  = SPORTS.length;
+  const SECS   = 60;
+
+  let flipped = [], matched = 0, tries = 0, score = 0;
+  let canFlip = true, timerID = null, secondsLeft = SECS;
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function initGame() {
+    document.getElementById('overlay').classList.remove('show');
+    clearInterval(timerID);
+    secondsLeft = SECS; matched = 0; tries = 0; score = 0;
+    flipped = []; canFlip = true;
+    updateHUD();
+
+    const deck = shuffle([...SPORTS, ...SPORTS]);
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    board.classList.remove('locked');
+
+    deck.forEach((emoji, idx) => {
+      const slot = document.createElement('div');
+      slot.className = 'card-slot';
+
+      slot.innerHTML = `
+        <div class="card-inner" id="ci-${idx}">
+          <div class="card-face card-back">
+            <div class="card-back-inner">🏅</div>
+          </div>
+          <div class="card-face card-front">
+            <span class="card-emoji">${emoji}</span>
+          </div>
+        </div>`;
+
+      slot.addEventListener('click', () => flipCard(idx, emoji));
+      board.appendChild(slot);
+    });
+
+    timerID = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    secondsLeft--;
+    updateHUD();
+    if (secondsLeft <= 0) { clearInterval(timerID); endGame(false); }
+  }
+
+  function updateHUD() {
+    document.getElementById('score').textContent = score;
+    document.getElementById('tries').textContent = tries;
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    const el = document.getElementById('timer');
+    el.textContent = m + ':' + String(s).padStart(2, '0');
+    el.classList.toggle('warn', secondsLeft <= 15);
+  }
+
+  function flipCard(idx, emoji) {
+    if (!canFlip) return;
+    const ci = document.getElementById('ci-' + idx);
+    if (ci.classList.contains('flipped') || ci.classList.contains('matched')) return;
+
+    ci.classList.add('flipped');
+    flipped.push({ idx, emoji, ci });
+
+    if (flipped.length < 2) return;
+
+    tries++;
+    canFlip = false;
+    const [a, b] = flipped;
+
+    if (a.emoji === b.emoji) {
+      score++; matched++;
+      updateHUD();
+      setTimeout(() => {
+        a.ci.classList.replace('flipped', 'matched');
+        b.ci.classList.replace('flipped', 'matched');
+        flipped = []; canFlip = true;
+        if (matched === TOTAL) { clearInterval(timerID); endGame(true); }
+      }, 650);
+    } else {
+      setTimeout(() => {
+        a.ci.classList.remove('flipped');
+        b.ci.classList.remove('flipped');
+        flipped = []; canFlip = true;
+      }, 950);
+    }
+  }
+
+  function endGame(completed) {
+    document.getElementById('board').classList.add('locked');
+    document.getElementById('result-score').textContent = score;
+
+    const pct = score / TOTAL;
+    document.getElementById('result-stars').textContent =
+      pct === 1 ? '⭐⭐⭐' : pct >= 0.6 ? '⭐⭐' : '⭐';
+    document.getElementById('result-title').textContent =
+      completed ? '¡Tablero completo!' : 'Tiempo agotado';
+    document.getElementById('result-sub').textContent =
+      completed ? 'Encontraste todos los pares.' : 'Se terminó el minuto.';
+
+    setTimeout(() => document.getElementById('overlay').classList.add('show'), 450);
+  }
+
+  initGame();
+</script>
+</body>
+</html>
