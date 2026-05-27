@@ -265,11 +265,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     // Mostrar datos del alumno en pantalla
     document.getElementById('alumno-name').textContent = ALUMNO || 'Alumno';
-    const meta = [
-      EDAD     ? 'Edad: '     + EDAD     + ' años' : '',
-      ESTATURA ? 'Est: '      + ESTATURA + ' cm'   : '',
-      PESO     ? 'Peso: '     + PESO     + ' kg'   : ''
-    ].filter(Boolean).join(' · ');
+    const meta = RETO;
     document.getElementById('alumno-meta').textContent = meta || RETO;
     document.getElementById('alumno-card').style.display = 'flex';
 
